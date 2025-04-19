@@ -130,7 +130,7 @@
         // Register Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                navigator.serviceWorker.register('./assets/scripts/sw.js', { scope: '/assets/scripts/' })
                     .then(registration => {
                         console.log('Service Worker registered:', registration);
                         // Clear cache and request Wake Lock after page load
