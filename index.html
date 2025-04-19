@@ -44,14 +44,12 @@
 
     <script>
         const videoPlayer = document.getElementById('videoPlayer');
-        const videoPlayerWrapper = document.querySelector('.videoPlayerWrapper');
 
         // List of video files in the assets/videos folder
         const videoFiles = [
             'assets/videos/angry.mp4',
             'assets/videos/cookie.mp4',
             'assets/videos/crying.mp4',
-            'assets/videos/dasai.mp4',
             'assets/videos/default.mp4',
             'assets/videos/distracted.mp4',
             'assets/videos/glitch.mp4',
@@ -83,19 +81,6 @@
         let shuffledVideos = [];
         let currentIndex = -1;
         let wakeLock = null;
-        let isReactionPlaying = false;
-        let lastEventTime = 0;
-        const EVENT_COOLDOWN = 1000; // 1 second debounce
-
-        // Map events to specific reaction videos
-        const eventVideoMap = {
-            shake: 'assets/videos/glitch.mp4',
-            tap: 'assets/videos/smile.mp4',
-            swipeLeft: 'assets/videos/look_left.mp4',
-            swipeRight: 'assets/videos/look_right.mp4',
-            swipeUp: 'assets/videos/stars.mp4',
-            swipeDown: 'assets/videos/look_down.mp4'
-        };
 
         // Clear cache if query parameter ?clearCache=true is present
         async function clearCacheIfRequested() {
@@ -142,151 +127,25 @@
             }
         });
 
-        // Device Motion (Shake Detection)
-        function setupDeviceMotion() {
-            if ('DeviceMotionEvent' in window) {
-                // Request permission on iOS 13+
-                if (typeof DeviceMotionEvent.requestPermission === 'function') {
-                    DeviceMotionEvent.requestPermission()
-                        .then(permissionState => {
-                            if (permissionState === 'granted') {
-                                addMotionListener();
-                            } else {
-                                console.warn('Device Motion permission denied');
-                            }
-                        })
-                        .catch(error => console.error('Device Motion permission error:', error));
-                } else {
-                    addMotionListener();
-                }
-            } else {
-                console.warn('Device Motion API not supported');
-            }
-        }
-
-        function addMotionListener() {
-            let lastShake = 0;
-            const SHAKE_THRESHOLD = 15; // Acceleration threshold for shake
-            window.addEventListener('devicemotion', event => {
-                const { x, y, z } = event.accelerationIncludingGravity || {};
-                if (x && y && z) {
-                    const acceleration = Math.sqrt(x * x + y * y + z * z);
-                    const now = Date.now();
-                    if (acceleration > SHAKE_THRESHOLD && now - lastShake > EVENT_COOLDOWN) {
-                        lastShake = now;
-                        playReactionVideo('shake');
-                    }
-                }
-            });
-        }
-
-        // Tap Detection
-        function setupTapDetection() {
-            videoPlayerWrapper.addEventListener('click', () => {
-                const now = Date.now();
-                if (now - lastEventTime > EVENT_COOLDOWN) {
-                    lastEventTime = now;
-                    playReactionVideo('tap');
-                }
-            });
-            // Prevent double-tap zoom on mobile
-            videoPlayerWrapper.addEventListener('touchstart', e => {
-                e.preventDefault();
-                const now = Date.now();
-                if (now - lastEventTime > EVENT_COOLDOWN) {
-                    lastEventTime = now;
-                    playReactionVideo('tap');
-                }
-            }, { passive: false });
-        }
-
-        // Gesture Detection (Swipes)
-        function setupGestureDetection() {
-            let touchStartX = 0;
-            let touchStartY = 0;
-            videoPlayerWrapper.addEventListener('touchstart', e => {
-                const touch = e.touches[0];
-                touchStartX = touch.clientX;
-                touchStartY = touch.clientY;
-            }, { passive: true });
-
-            videoPlayerWrapper.addEventListener('touchend', e => {
-                const touch = e.changedTouches[0];
-                const touchEndX = touch.clientX;
-                const touchEndY = touch.clientY;
-                const deltaX = touchEndX - touchStartX;
-                const deltaY = touchEndY - touchStartY;
-                const minSwipeDistance = 50; // Minimum swipe distance in pixels
-
-                const now = Date.now();
-                if (now - lastEventTime < EVENT_COOLDOWN) return;
-
-                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
-                    lastEventTime = now;
-                    playReactionVideo(deltaX > 0 ? 'swipeRight' : 'swipeLeft');
-                } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > minSwipeDistance) {
-                    lastEventTime = now;
-                    playReactionVideo(deltaY > 0 ? 'swipeDown' : 'swipeUp');
-                }
-            }, { passive: true });
-        }
-
-        // Play reaction video and resume shuffle
-        function playReactionVideo(eventType) {
-            if (isReactionPlaying || !eventVideoMap[eventType]) return;
-            isReactionPlaying = true;
-
-            const reactionVideo = eventVideoMap[eventType];
-            const originalIndex = currentIndex;
-
-            videoPlayer.src = reactionVideo;
-            videoPlayer.play();
-
-            videoPlayer.onended = () => {
-                isReactionPlaying = false;
-                currentIndex = originalIndex; // Restore shuffle position
-                playNextVideo();
-            };
-
-            videoPlayer.onerror = () => {
-                console.error('Error playing reaction video:', reactionVideo);
-                isReactionPlaying = false;
-                currentIndex = originalIndex;
-                playNextVideo();
-            };
-        }
-
         // Register Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/assets/scripts/sw.js', { scope: '/assets/scripts/' })
+                navigator.serviceWorker.register('/sw.js', { scope: '/' })
                     .then(registration => {
                         console.log('Service Worker registered:', registration);
-                        clearCacheIfRequested().then(() => {
-                            requestWakeLock();
-                            setupDeviceMotion();
-                            setupTapDetection();
-                            setupGestureDetection();
-                        });
+                        // Clear cache and request Wake Lock after page load
+                        clearCacheIfRequested().then(requestWakeLock);
                     })
                     .catch(error => {
                         console.error('Service Worker registration failed:', error);
-                        clearCacheIfRequested().then(() => {
-                            requestWakeLock();
-                            setupDeviceMotion();
-                            setupTapDetection();
-                            setupGestureDetection();
-                        });
+                        // Still attempt cache clear and Wake Lock
+                        clearCacheIfRequested().then(requestWakeLock);
                     });
             });
         } else {
+            // Handle cache clear and Wake Lock if Service Worker is unsupported
             window.addEventListener('load', () => {
-                clearCacheIfRequested().then(() => {
-                    requestWakeLock();
-                    setupDeviceMotion();
-                    setupTapDetection();
-                    setupGestureDetection();
-                });
+                clearCacheIfRequested().then(requestWakeLock);
             });
         }
 
@@ -301,7 +160,6 @@
         }
 
         function playNextVideo() {
-            if (isReactionPlaying) return;
             currentIndex = (currentIndex + 1) % shuffledVideos.length;
             videoPlayer.src = shuffledVideos[currentIndex];
             videoPlayer.play();
