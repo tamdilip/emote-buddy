@@ -35,7 +35,7 @@
     </style>
 </head>
 
-<body>
+<body ontouchstart="toggleFullScreen()">
     <div class="container">
         <div class="videoPlayerWrapper">
             <video id="videoPlayer" width="250" height="250" poster="/assets/gifs/smile.gif" autoplay muted></video>
@@ -43,6 +43,37 @@
     </div>
 
     <script>
+        let fullScreenEnabled = false;
+
+        const enableFullScreen = () => {
+            const elem = document.documentElement;
+
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) { /* Safari */
+                elem.webkitRequestFullscreen();
+            }
+        };
+
+        const disableFullScreen = () => {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) { /* Safari */
+                document.webkitExitFullscreen();
+            }
+        };
+
+
+        const toggleFullScreen = () => {
+            fullScreenEnabled = !fullScreenEnabled;
+
+            if (fullScreenEnabled)
+                disableFullScreen();
+            else
+                enableFullScreen();
+        };
+
+
         const videoPlayer = document.getElementById('videoPlayer');
 
         // List of video files in the assets/videos folder
