@@ -1,4 +1,4 @@
-# emote-buddy
+# 🫠 emote-buddy
 
 [![Live Cached](https://img.shields.io/badge/🤖_Live-Cached-blue)](https://tamdilip.github.io/emote-buddy/) [![Live NonCached](https://img.shields.io/badge/🧂_Live-NonCached-pink)](https://tamdilip.github.io/emote-buddy/)
 
