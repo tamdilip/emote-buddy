@@ -81,6 +81,27 @@
         let currentIndex = -1;
         let wakeLock = null;
 
+        // Clear cache if query parameter ?clearCache=true is present
+        async function clearCacheIfRequested() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('clearCache') === 'true') {
+                try {
+                    if ('caches' in window) {
+                        const cache = await caches.open('emote-buddy-videos');
+                        const keys = await cache.keys();
+                        await Promise.all(keys.map(key => cache.delete(key)));
+                        console.log('Cache cleared successfully');
+                        // Redirect to remove query parameter
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    } else {
+                        console.warn('Cache API not supported');
+                    }
+                } catch (error) {
+                    console.error('Failed to clear cache:', error);
+                }
+            }
+        }
+
         // Request Wake Lock to keep screen awake
         async function requestWakeLock() {
             try {
@@ -111,18 +132,20 @@
                 navigator.serviceWorker.register('/sw.js', { scope: '/' })
                     .then(registration => {
                         console.log('Service Worker registered:', registration);
-                        // Request Wake Lock after page load
-                        requestWakeLock();
+                        // Clear cache and request Wake Lock after page load
+                        clearCacheIfRequested().then(requestWakeLock);
                     })
                     .catch(error => {
                         console.error('Service Worker registration failed:', error);
-                        // Still attempt Wake Lock if Service Worker fails
-                        requestWakeLock();
+                        // Still attempt cache clear and Wake Lock
+                        clearCacheIfRequested().then(requestWakeLock);
                     });
             });
         } else {
-            // Request Wake Lock even if Service Worker is unsupported
-            window.addEventListener('load', requestWakeLock);
+            // Handle cache clear and Wake Lock if Service Worker is unsupported
+            window.addEventListener('load', () => {
+                clearCacheIfRequested().then(requestWakeLock);
+            });
         }
 
         function shuffleVideos() {
