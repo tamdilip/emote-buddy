@@ -1,4 +1,7 @@
 # emote-buddy
+
+[![Live Demo](https://img.shields.io/badge/🤖 Live-Demo-green)](https://tamdilip.github.io/emote-buddy/)
+
 A random page to shuffle and play Dasai Mochi's funny anime expressions.
 
 - All expressions are cached to browser cache storage.
