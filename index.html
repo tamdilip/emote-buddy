@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emote Buddy</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            flex-direction: column;
+            background-color: #0b0b16;
+        }
+
+        .container {
+            top: 50%;
+            left: 50%;
+            position: absolute;
+            margin-right: -50%;
+            transform: translate(-50%, -50%);
+        }
+
+
+        #videoPlayer {
+            margin: -20px;
+        }
+
+        .videoPlayerWrapper {
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="videoPlayerWrapper">
+            <video id="videoPlayer" width="180" height="180" autoplay muted></video>
+        </div>
+    </div>
+
+    <script>
+        const videoPlayer = document.getElementById('videoPlayer');
+
+        // List of video files in the assets/videos folder
+        const videoFiles = [
+            'assets/videos/angry.mp4',
+            'assets/videos/cookie.mp4',
+            'assets/videos/crying.mp4',
+            'assets/videos/default.mp4',
+            'assets/videos/distracted.mp4',
+            'assets/videos/glitch.mp4',
+            'assets/videos/headlights.mp4',
+            'assets/videos/laugh.mp4',
+            'assets/videos/look_down.mp4',
+            'assets/videos/look_left.mp4',
+            'assets/videos/look_right.mp4',
+            'assets/videos/love.mp4',
+            'assets/videos/music.mp4',
+            'assets/videos/police.mp4',
+            'assets/videos/pong.mp4',
+            'assets/videos/rainbow.mp4',
+            'assets/videos/raspberry.mp4',
+            'assets/videos/revs.mp4',
+            'assets/videos/sakura.mp4',
+            'assets/videos/shrink.mp4',
+            'assets/videos/sleepy.mp4',
+            'assets/videos/smile.mp4',
+            'assets/videos/smirk.mp4',
+            'assets/videos/sneeze.mp4',
+            'assets/videos/squint.mp4',
+            'assets/videos/stars.mp4',
+            'assets/videos/turbo.mp4',
+            'assets/videos/upside_down.mp4',
+            'assets/videos/uwu.mp4'
+        ];
+
+        let shuffledVideos = [];
+        let currentIndex = -1;
+        let wakeLock = null;
+
+        // Request Wake Lock to keep screen awake
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Wake Lock acquired');
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Wake Lock released');
+                    });
+                } else {
+                    console.warn('Wake Lock API not supported in this browser');
+                }
+            } catch (error) {
+                console.error('Failed to acquire Wake Lock:', error);
+            }
+        }
+
+        // Re-request Wake Lock on visibility change
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && wakeLock === null) {
+                requestWakeLock();
+            }
+        });
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                    .then(registration => {
+                        console.log('Service Worker registered:', registration);
+                        // Request Wake Lock after page load
+                        requestWakeLock();
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed:', error);
+                        // Still attempt Wake Lock if Service Worker fails
+                        requestWakeLock();
+                    });
+            });
+        } else {
+            // Request Wake Lock even if Service Worker is unsupported
+            window.addEventListener('load', requestWakeLock);
+        }
+
+        function shuffleVideos() {
+            shuffledVideos = [...videoFiles];
+            for (let i = shuffledVideos.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledVideos[i], shuffledVideos[j]] = [shuffledVideos[j], shuffledVideos[i]];
+            }
+            currentIndex = -1;
+            playNextVideo();
+        }
+
+        function playNextVideo() {
+            currentIndex = (currentIndex + 1) % shuffledVideos.length;
+            videoPlayer.src = shuffledVideos[currentIndex];
+            videoPlayer.play();
+
+            videoPlayer.onended = () => {
+                playNextVideo();
+            };
+        }
+
+        videoPlayer.onerror = () => {
+            console.error('Error playing video:', shuffledVideos[currentIndex]);
+            playNextVideo();
+        };
+
+        // Start playing on load
+        if (videoFiles.length > 0) {
+            shuffleVideos();
+        } else {
+            console.error('No videos found in the assets folder.');
+        }
+    </script>
+</body>
+
+</html>
