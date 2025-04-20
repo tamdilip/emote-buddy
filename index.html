@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Emote Buddy</title>
+    
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
 
@@ -35,7 +36,7 @@
     </style>
 </head>
 
-<body ontouchstart="toggleFullScreen()">
+<body ontouchstart="bodyTapped()">
     <div class="container">
         <div class="videoPlayerWrapper">
             <video id="videoPlayer" width="250" height="250" poster="/assets/gifs/smile.gif" autoplay muted></video>
@@ -112,6 +113,33 @@
         let shuffledVideos = [];
         let currentIndex = -1;
         let wakeLock = null;
+
+        var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition;
+        var recognition = new SpeechRecognition();
+
+        const recognizedExpressions = videoFiles.map(v => v.substring(v.lastIndexOf('/') + 1, v.lastIndexOf('.mp4')));
+
+        recognition.onresult = function (event) {
+            const transcript = event.results[0][0].transcript;
+
+            if (transcript.includes('screen')) {
+                toggleFullScreen();
+            } else {
+                const matchedExpressionIndex = recognizedExpressions.findIndex(r => transcript.includes(r));
+                if (matchedExpressionIndex !== -1) {
+                    videoPlayer.src = videoFiles[matchedExpressionIndex];
+                    videoPlayer.play();
+
+                    videoPlayer.onended = () => {
+                        playNextVideo();
+                    };
+                }
+            }
+        };
+
+        const bodyTapped = () => {
+            recognition.start();
+        };
 
         // Clear cache if query parameter ?clearCache=true is present
         async function clearCacheIfRequested() {
